@@ -35,8 +35,9 @@ module Isuride
 
       waiting_rides.each do |ride|
         matched_chairs = chairs.map{|chair|
-          distance = calculate_distance(ride.fetch(:pickup_latitude), ride.fetch(:pickup_longitude), chair.fetch(:latitude), chair.fetch(:longitude))
-          time = distance * 1.0 / chair.fetch(:speed)
+          pickup_distance = calculate_distance(ride.fetch(:pickup_latitude), ride.fetch(:pickup_longitude), chair.fetch(:latitude), chair.fetch(:longitude))
+          destination_distance = calculate_distance(ride.fetch(:pickup_latitude), ride.fetch(:pickup_longitude), ride.fetch(:destination_latitude), ride.fetch(:destination_longitude))
+          time = (pickup_distance + destination_distance) * 1.0 / chair.fetch(:speed)
           {
             id: chair.fetch(:chair_id),
             time:,
