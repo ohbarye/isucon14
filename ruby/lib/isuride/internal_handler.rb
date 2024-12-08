@@ -13,7 +13,7 @@ module Isuride
         halt 204
       end
 
-      10.times do
+      # 10.times do
         # matched = db.query('SELECT * FROM chairs INNER JOIN (SELECT id FROM chairs WHERE is_active = TRUE ORDER BY RAND() LIMIT 1) AS tmp ON chairs.id = tmp.id LIMIT 1').first
         # unless matched
         #   halt 204
@@ -37,22 +37,24 @@ group by chair_id) cl on chair_locations.created_at = cl.last_updated_at) loc on
 where is_active = true
 SQL
 
-        matched = chairs.map{|chair|
-          {
-            id: chair.fetch(:chair_id),
-            distance: calculate_distance(ride.fetch(:pickup_latitude), ride.fetch(:pickup_longitude), chair.fetch(:latitude), chair.fetch(:longitude))
-          }
-        }.min_by{_1[:distance]}
-        unless matched
-          halt 204
-        end
+      matched_chairs = chairs.map{|chair|
+        {
+          id: chair.fetch(:chair_id),
+          distance: calculate_distance(ride.fetch(:pickup_latitude), ride.fetch(:pickup_longitude), chair.fetch(:latitude), chair.fetch(:longitude))
+        }
+      }.sort_by{_1[:distance]}
+      if matched_chairs.size == 0
+        halt 204
+      end
 
+      matched_chairs.each do |matched|
         empty = db.xquery('SELECT COUNT(*) = 0 FROM (SELECT COUNT(chair_sent_at) = 6 AS completed FROM ride_statuses WHERE ride_id IN (SELECT id FROM rides WHERE chair_id = ?) GROUP BY ride_id) is_completed WHERE completed = FALSE', matched.fetch(:id), as: :array).first[0]
         if empty > 0
           db.xquery('UPDATE rides SET chair_id = ? WHERE id = ?', matched.fetch(:id), ride.fetch(:id))
           break
         end
       end
+      # end
 
       204
     end
