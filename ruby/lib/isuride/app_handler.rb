@@ -399,12 +399,32 @@ module Isuride
         end
 
       response = db_transaction do |tx|
-        chairs = tx.query('SELECT * FROM chairs')
+        chairs = db.query(<<~SQL)
+          select chair_id,
+                 longitude,
+                 latitude,
+                 model,
+                 name
+          from chairs
+          inner join
+          (select cl.chair_id,
+                  latitude,
+                  longitude
+          from chair_locations
+          inner join
+          (select chair_id,
+                  max(created_at) as last_updated_at
+          from chair_locations cl
+          group by chair_id) cl on chair_locations.created_at = cl.last_updated_at) loc on loc.chair_id = chairs.id
+          where is_active = true
+        SQL
+
+        # chairs = tx.query('SELECT * FROM chairs')
 
         nearby_chairs = chairs.filter_map do |chair|
-          unless chair.fetch(:is_active)
-            next
-          end
+          # unless chair.fetch(:is_active)
+          #   next
+          # end
 
           rides = tx.xquery('SELECT * FROM rides WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1', chair.fetch(:id))
 
@@ -422,19 +442,19 @@ module Isuride
           end
 
           # 最新の位置情報を取得
-          chair_location = tx.xquery('SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1', chair.fetch(:id)).first
-          if chair_location.nil?
-            next
-          end
+          # chair_location = tx.xquery('SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1', chair.fetch(:id)).first
+          # if chair_location.nil?
+          #   next
+          # end
 
-          if calculate_distance(latitude, longitude, chair_location.fetch(:latitude), chair_location.fetch(:longitude)) <= distance
+          if calculate_distance(latitude, longitude, chair.fetch(:latitude), chair.fetch(:longitude)) <= distance
             {
               id: chair.fetch(:id),
               name: chair.fetch(:name),
               model: chair.fetch(:model),
               current_coordinate: {
-                latitude: chair_location.fetch(:latitude),
-                longitude: chair_location.fetch(:longitude),
+                latitude: chair.fetch(:latitude),
+                longitude: chair.fetch(:longitude),
               },
             }
           end
