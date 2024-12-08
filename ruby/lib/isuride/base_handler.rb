@@ -23,7 +23,8 @@ module Isuride
     INITIAL_FARE = 500
     FARE_PER_DISTANCE = 100
 
-    enable :logging
+    # enable :logging
+    disable :logging
     set :show_exceptions, :after_handler
 
     class HttpError < Sinatra::Error
