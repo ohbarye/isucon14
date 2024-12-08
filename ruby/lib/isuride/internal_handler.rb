@@ -22,7 +22,8 @@ module Isuride
         chairs = db.query(<<~SQL)
 select chair_id,
        longitude,
-       latitude
+       latitude,
+       speed
 from chairs
 inner join
 (select cl.chair_id,
@@ -34,15 +35,18 @@ inner join
         max(created_at) as last_updated_at
 from chair_locations cl
 group by chair_id) cl on chair_locations.created_at = cl.last_updated_at) loc on loc.chair_id = chairs.id
+inner join chair_models cm on chairs.model = cm.name
 where is_active = true
 SQL
 
       matched_chairs = chairs.map{|chair|
+        distance = calculate_distance(ride.fetch(:pickup_latitude), ride.fetch(:pickup_longitude), chair.fetch(:latitude), chair.fetch(:longitude))
+        time = distance * 1.0 / chair.fetch(:speed)
         {
           id: chair.fetch(:chair_id),
-          distance: calculate_distance(ride.fetch(:pickup_latitude), ride.fetch(:pickup_longitude), chair.fetch(:latitude), chair.fetch(:longitude))
+          time:,
         }
-      }.sort_by{_1[:distance]}
+      }.sort_by{_1[:time]}
       if matched_chairs.size == 0
         halt 204
       end
