@@ -400,7 +400,7 @@ module Isuride
 
       response = db_transaction do |tx|
         chairs = db.query(<<~SQL)
-          select chair_id,
+          select chairs.id,
                  longitude,
                  latitude,
                  model,
