@@ -110,7 +110,7 @@ module Isuride
 
     # GET /api/owner/chairs
     get '/chairs' do
-      chairs = db.xquery(<<~SQL, @current_owner.id)
+      chairs = db.xquery(<<~SQL, @current_owner.id, @current_owner.id)
         SELECT id,
         owner_id,
         name,
@@ -126,10 +126,12 @@ module Isuride
                            SUM(IFNULL(distance, 0)) AS total_distance,
                            MAX(created_at)          AS total_distance_updated_at
                     FROM (SELECT chair_id,
-                                 created_at,
-                                 ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
-                                 ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
-                          FROM chair_locations) tmp
+                                 chair_locations.created_at,
+                                 ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY chair_locations.created_at)) +
+                                 ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY chair_locations.created_at)) AS distance
+                          FROM chair_locations
+                          INNER JOIN chairs on chair_locations.chair_id = chairs.id AND chairs.owner_id = ?
+                          ) tmp
                     GROUP BY chair_id) distance_table ON distance_table.chair_id = chairs.id
         WHERE owner_id = ?
       SQL
