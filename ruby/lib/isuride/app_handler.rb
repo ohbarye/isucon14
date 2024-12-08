@@ -426,7 +426,7 @@ module Isuride
           FROM rides
           WHERE created_at = (SELECT max(created_at)
                               FROM rides
-                              WHERE chair_id in ('01JDFHNTV0KGFZ2N2B4CX0RBC5')
+                              WHERE chair_id in (#{chairs.map{"'" + _1[:id] + "'"}.join(", ")})
                               group by chair_id)
         SQL
         rides = rides.group_by { |ride| ride.fetch(:chair_id) }
